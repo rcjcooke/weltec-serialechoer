@@ -1,50 +1,62 @@
 #include <Arduino.h>
 
-// Processes some raw input and updates the value
-bool handleRawSerialInput(String &inputValue) {
-
-  bool terminated = false;
+// Get user input while letting the menu take care of display updates etc.
+bool getInput(int &inputValue, HardwareSerial serialInterface) {
+  bool gotSome = false;
   // Process input - waiting for the terminator (enter key)
-  while (!terminated && Serial.available() > 0) {
-    int input=0;
-    input = Serial.read();
-    
-    // Correct for terminals that pad out 7-bit ASCII to 8 bits with an extra high bit 
-    // (like Putty - pretty sure it's because it's translating but I don't care at this point!) 
-    if (input > 127) {
-      input = input - 128;
+  if (serialInterface.available() > 0) {
+    while (serialInterface.available() > 0) {
+      inputValue = serialInterface.read();
     }
-
-    if (input == '\r') {
-      terminated = true;
-    } else if (input == '\b') {
-      inputValue.remove(inputValue.length()-1, 1);
-    } else {
-      inputValue.concat((char) input);
-    }
+    gotSome = true;
+  } else {
+    gotSome = false;
   }
-  return terminated;
+
+  return gotSome;
 }
 
 // Get user input while letting the menu take care of display updates etc.
-String getUserInput() {
-  String inputValue="";
-
-  while (Serial.available()==0) {
+bool getUserInput(int &inputValue) {
+  bool gotSome = false;
+  // Process input - waiting for the terminator (enter key)
+  if (Serial.available() > 0) {
+    while (Serial.available() > 0) {
+      inputValue = Serial.read();
+    }
+    gotSome = true;
+  } else {
+    gotSome = false;
   }
 
-  // Process the new buffer content and update the inputValue with it
-  handleRawSerialInput(inputValue);
-    
-  return inputValue;
+  return gotSome;
 }
 
 void setup() {
-  Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8E1);
+  Serial.begin(9600);
+  Serial2.begin(9600);
+  Serial3.begin(9600);
 }
 
 void loop() {
-  String input = getUserInput();
-  Serial2.print(input);
+  int userInputValue = 0;
+  int serial2InputValue = 0;
+  int serial3InputValue = 0;
+
+  bool userInput = getUserInput(userInputValue);
+  bool serial2Input = getInput(serial2InputValue, Serial2);
+  bool serial3Input = getInput(serial3InputValue, Serial3);
+
+  if (userInput) {
+    Serial2.print(userInputValue);
+    Serial3.print(userInputValue);
+  }
+  if (serial2Input) {
+    Serial.print(serial2InputValue);
+    Serial3.print(serial2InputValue);
+  }
+  if (serial3Input) {
+    Serial.print(serial3InputValue);
+    Serial2.print(serial3InputValue);
+  }
 }
